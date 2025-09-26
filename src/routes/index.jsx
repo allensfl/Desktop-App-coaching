@@ -63,7 +63,7 @@ export const AppRoutes = () => (
       <Route path="coachee-portal" element={<CoacheePortalLinks />} />
       <Route path="store" element={<StorePage />} />
       <Route path="documentation" element={<DocumentationPage />} />
-      <Route path="*" element={<Dashboard />} />
+    
     </Route>
   </Routes>
 );

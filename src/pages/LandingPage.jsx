@@ -5,7 +5,7 @@ const supabaseUrl = 'https://jlvmkfpjnqvtnqepmpsf.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impsdm1rZnBqbnF2dG5xZXBtcHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MzE3MjMsImV4cCI6MjA3MzUwNzcyM30.xdltEUoQC5zK6Im6NIJBBmHy2XzR36A9NoarPTwatbQ'; // Dein echter Key
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-const BetaLandingPage = () => {
+const LandingPage = () => {
   const [currentStep, setCurrentStep] = useState('landing'); // landing, success, login, password, app
   const [availableSpots, setAvailableSpots] = useState(10);
   const [loading, setLoading] = useState(false);
@@ -661,4 +661,4 @@ const BetaLandingPage = () => {
   }
 };
 
-export default BetaLandingPage;
+export default LandingPage;
