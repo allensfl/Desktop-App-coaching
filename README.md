@@ -97,3 +97,4 @@ src/
 ## 📄 Lizenz
 
 Dieses Projekt ist ein Prototyp und für Demonstrationszwecke gedacht. Eine produktive Nutzung wird erst nach Erreichen der Meilensteine aus Phase 2 empfohlen.
+# Beta ready
