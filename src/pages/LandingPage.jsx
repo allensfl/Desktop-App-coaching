@@ -2,15 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = 'https://jlvmkfpjnqvtnqepmpsf.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impsdm1rZnBqbnF2dG5xZXBtcHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MzE3MjMsImV4cCI6MjA3MzUwNzcyM30.xdltEUoQC5zK6Im6NIJBBmHy2XzR36A9NoarPTwatbQ'; // Dein echter Key
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impsdm1rZnBqbnF2dG5xZXBtcHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5MzE3MjMsImV4cCI6MjA3MzUwNzcyM30.xdltEUoQC5zK6Im6NIJBBmHy2XzR36A9NoarPTwatbQ';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const LandingPage = () => {
-  const [currentStep, setCurrentStep] = useState('landing'); // landing, success, login, password, app
   const [availableSpots, setAvailableSpots] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [success, setSuccess] = useState(false);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -21,21 +20,6 @@ const LandingPage = () => {
     experience: '',
     coacheeCount: ''
   });
-  
-  // Login states
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: ''
-  });
-  
-  // Password change states
-  const [passwordData, setPasswordData] = useState({
-    newPassword: '',
-    confirmPassword: ''
-  });
-  
-  // User data from successful signup/login
-  const [userData, setUserData] = useState(null);
 
   // Load available spots
   const loadAvailableSpots = async () => {
@@ -85,7 +69,7 @@ const LandingPage = () => {
       const spotNumber = (count || 0) + 1;
 
       // Insert new beta user
-      const { data, error: insertError } = await supabase
+      const { error: insertError } = await supabase
         .from('beta_users')
         .insert([{
           first_name: formData.firstName,
@@ -95,16 +79,12 @@ const LandingPage = () => {
           experience: formData.experience,
           coachee_count: formData.coacheeCount,
           beta_spot_number: spotNumber,
-          temp_password: 'beta2024temp!',
-          password_changed: false,
           created_at: new Date().toISOString()
-        }])
-        .select();
+        }]);
 
       if (insertError) throw insertError;
 
-      setUserData(data[0]);
-      setCurrentStep('success');
+      setSuccess(true);
       loadAvailableSpots();
 
     } catch (err) {
@@ -115,101 +95,59 @@ const LandingPage = () => {
     }
   };
 
-  // Handle login
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  // Success screen
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
+        <div className="max-w-lg mx-auto bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl p-8 text-center">
+          <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          
+          <h2 className="text-3xl font-bold text-white mb-4">
+            Beta-Anmeldung erfolgreich!
+          </h2>
+          
+          <p className="text-slate-300 mb-8">
+            Willkommen bei CoachingSpace Beta! Du kannst jetzt die App erkunden.
+          </p>
+          
+          <div className="space-y-4">
+            <a 
+              href="/app" 
+              className="inline-block w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors"
+            >
+              Zur CoachingSpace App
+            </a>
+            <div>
+              <a 
+                href="/" 
+                className="text-slate-400 hover:text-white transition-colors"
+              >
+                Zurück zur Startseite
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-    try {
-      // Check against beta_users table
-      const { data: user, error } = await supabase
-        .from('beta_users')
-        .select('*')
-        .eq('email', loginData.email)
-        .single();
-
-      if (error || !user) {
-        setError('E-Mail nicht gefunden. Hast du dich für die Beta registriert?');
-        setLoading(false);
-        return;
-      }
-
-      // Check password
-      const passwordToCheck = user.password_changed ? user.new_password : user.temp_password;
-      
-      if (loginData.password !== passwordToCheck) {
-        // Update login attempts
-        await supabase
-          .from('beta_users')
-          .update({ login_attempts: (user.login_attempts || 0) + 1 })
-          .eq('email', loginData.email);
-        
-        setError('Falsches Passwort. Verwende das temporäre Passwort aus der E-Mail.');
-        setLoading(false);
-        return;
-      }
-
-      setUserData(user);
-      
-      // If password not changed yet, go to password change
-      if (!user.password_changed) {
-        setCurrentStep('password');
-      } else {
-        setCurrentStep('app');
-      }
-
-    } catch (err) {
-      console.error('Login error:', err);
-      setError('Anmeldung fehlgeschlagen. Bitte versuche es erneut.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle password change
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('Passwörter stimmen nicht überein.');
-      setLoading(false);
-      return;
-    }
-
-    if (passwordData.newPassword.length < 6) {
-      setError('Passwort muss mindestens 6 Zeichen haben.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('beta_users')
-        .update({ 
-          new_password: passwordData.newPassword,
-          password_changed: true
-        })
-        .eq('email', userData.email);
-
-      if (error) throw error;
-
-      setSuccess('Passwort erfolgreich geändert!');
-      setTimeout(() => setCurrentStep('app'), 2000);
-
-    } catch (err) {
-      console.error('Password change error:', err);
-      setError('Passwort-Änderung fehlgeschlagen.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Render different steps
-  const renderLandingPage = () => (
+  // Main landing page
+  return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      {/* Header */}
+      <header className="container mx-auto px-4 py-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-white">CoachingSpace</h1>
+          <div className="text-slate-400 text-sm">
+            Beta-Anmeldung erforderlich
+          </div>
+        </div>
+      </header>
+
       <div className="container mx-auto px-4 py-8">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-white mb-4">
@@ -425,240 +363,6 @@ const LandingPage = () => {
       </div>
     </div>
   );
-
-  const renderSuccessScreen = () => (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="max-w-lg mx-auto bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl p-8 text-center">
-        <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        
-        <h2 className="text-3xl font-bold text-white mb-4">
-          Willkommen, Beta-Tester #{userData?.beta_spot_number}!
-        </h2>
-        
-        <p className="text-slate-300 mb-8">
-          Du hast erfolgreich einen Beta-Platz reserviert. Hier sind deine Login-Daten:
-        </p>
-        
-        <div className="bg-slate-700/50 border border-slate-600/50 rounded-lg p-6 mb-8">
-          <h3 className="text-white font-semibold mb-4">🔑 Deine Zugangsdaten</h3>
-          <div className="space-y-3 text-left">
-            <div>
-              <span className="text-slate-400">E-Mail:</span>
-              <div className="bg-slate-800 px-3 py-2 rounded mt-1 text-white font-mono">
-                {userData?.email}
-              </div>
-            </div>
-            <div>
-              <span className="text-slate-400">Temporäres Passwort:</span>
-              <div className="bg-slate-800 px-3 py-2 rounded mt-1 text-white font-mono">
-                beta2024temp!
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 mb-8">
-          <p className="text-blue-400 text-sm">
-            <strong>Nächster Schritt:</strong> Gehe zur Login-Seite und melde dich mit diesen Daten an. 
-            Du wirst aufgefordert, ein neues Passwort zu setzen.
-          </p>
-        </div>
-        
-        <button
-          onClick={() => setCurrentStep('login')}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-        >
-          Zur Login-Seite
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderLoginPage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="max-w-md mx-auto bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl p-8">
-        <h2 className="text-3xl font-bold text-white text-center mb-8">
-          Beta-Tester Login
-        </h2>
-        
-        <form onSubmit={handleLogin} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              E-Mail-Adresse
-            </label>
-            <input
-              type="email"
-              required
-              value={loginData.email}
-              onChange={(e) => setLoginData({...loginData, email: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Deine Beta-E-Mail"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Passwort
-            </label>
-            <input
-              type="password"
-              required
-              value={loginData.password}
-              onChange={(e) => setLoginData({...loginData, password: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="beta2024temp! oder dein neues Passwort"
-            />
-          </div>
-          
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-          >
-            {loading ? 'Anmeldung...' : 'Anmelden'}
-          </button>
-        </form>
-        
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => setCurrentStep('landing')}
-            className="text-slate-400 hover:text-white text-sm"
-          >
-            ← Zurück zur Landing Page
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderPasswordChangePage = () => (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="max-w-md mx-auto bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl p-8">
-        <h2 className="text-3xl font-bold text-white text-center mb-4">
-          Neues Passwort setzen
-        </h2>
-        
-        <p className="text-slate-300 text-center mb-8">
-          Hallo {userData?.first_name}! Bitte setze ein neues, sicheres Passwort für dein Beta-Konto.
-        </p>
-        
-        <form onSubmit={handlePasswordChange} className="space-y-6">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Neues Passwort
-            </label>
-            <input
-              type="password"
-              required
-              value={passwordData.newPassword}
-              onChange={(e) => setPasswordData({...passwordData, newPassword: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Mindestens 6 Zeichen"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Passwort bestätigen
-            </label>
-            <input
-              type="password"
-              required
-              value={passwordData.confirmPassword}
-              onChange={(e) => setPasswordData({...passwordData, confirmPassword: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-700/50 border border-slate-600/50 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Passwort wiederholen"
-            />
-          </div>
-          
-          {error && (
-            <div className="bg-red-500/20 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-          
-          {success && (
-            <div className="bg-green-500/20 border border-green-500/50 text-green-400 px-4 py-3 rounded-lg text-sm">
-              {success}
-            </div>
-          )}
-          
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-          >
-            {loading ? 'Wird gesetzt...' : 'Passwort setzen'}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-
-  const renderAppRedirect = () => (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center">
-      <div className="max-w-md mx-auto bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 rounded-xl p-8 text-center">
-        <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
-          <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-        
-        <h2 className="text-3xl font-bold text-white mb-4">
-          Setup erfolgreich!
-        </h2>
-        
-        <p className="text-slate-300 mb-8">
-          Willkommen in der CoachingSpace Beta! Du wirst nun zur App weitergeleitet.
-        </p>
-        
-        <button
-          onClick={() => {
-            // Hier zur echten App weiterleiten
-            window.location.href = '/app';
-          }}
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
-        >
-          CoachingSpace Beta starten
-        </button>
-        
-        <div className="mt-6 bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-          <p className="text-blue-400 text-sm">
-            <strong>Deine nächsten Schritte:</strong><br/>
-            1. App erkunden (alle 7 Module)<br/>
-            2. Mindestens 2 Stunden testen<br/>
-            3. Strukturiertes Feedback per E-Mail
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  // Main render
-  switch (currentStep) {
-    case 'landing':
-      return renderLandingPage();
-    case 'success':
-      return renderSuccessScreen();
-    case 'login':
-      return renderLoginPage();
-    case 'password':
-      return renderPasswordChangePage();
-    case 'app':
-      return renderAppRedirect();
-    default:
-      return renderLandingPage();
-  }
 };
 
 export default LandingPage;
