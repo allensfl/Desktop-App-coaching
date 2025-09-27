@@ -40,7 +40,7 @@ export const AppRoutes = () => (
     <Route path="/tool-presenter/:toolId" element={<ToolPresenter />} />
     
     {/* App-Routes unter /app/* MIT Layout */}
-    <Route path="/app" element={<Layout />}>
+   <Route path="" element={<Layout />}>
       <Route index element={<Dashboard />} />
       <Route path="coachees" element={<Coachees />} />
       <Route path="coachees/:id" element={<CoacheeDetail />} />
