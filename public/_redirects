@@ -1,0 +1,4 @@
+# App-Routes zu React weiterleiten
+/app/*  /index.html  200
+/beta-feedback  /index.html  200
+/*  /index.html  200
