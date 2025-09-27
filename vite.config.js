@@ -6,11 +6,14 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+      '@': path.resolve(__dirname, './src')
+    }
   },
   build: {
-    outDir: 'dist',
-    sourcemap: false
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
+    }
   }
 })
